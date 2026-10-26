@@ -1,0 +1,1986 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>КРУГ — ассистент для практикующих</title>
+<meta name="description" content="Рабочее пространство для астрологов, тарологов, нумерологов, гипнологов, психологов и эзотериков.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23000'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%23fff' stroke-width='3'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --ink:#000;
+    --paper:#fff;
+    --muted:#6f6f6f;
+    --muted-2:#9a9a9a;
+    --line:#e7e7e7;
+    --line-soft:#f1f1f1;
+    --soft:#f6f6f6;
+    --soft-2:#ededed;
+    --mono:ui-monospace,"Cascadia Mono",SFMono-Regular,Consolas,"Liberation Mono",monospace;
+    --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+    --r:12px;
+    --ease:cubic-bezier(.22,.61,.36,1);
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;background:var(--paper);color:var(--ink);
+    font-family:var(--sans);font-size:15.5px;line-height:1.62;
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  }
+  ::selection{background:#000;color:#fff}
+  button,input,textarea{font-family:inherit;color:inherit}
+  :focus-visible{outline:2px solid #000;outline-offset:2px;border-radius:4px}
+  .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+  .is-hidden{display:none !important}
+
+  /* ---------- shell ---------- */
+  .app{display:flex;height:100dvh;overflow:hidden}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column;position:relative;background:var(--paper)}
+  .sidebar{
+    flex:0 0 304px;width:304px;border-right:1px solid var(--line);
+    display:flex;flex-direction:column;background:var(--paper);z-index:40;
+  }
+
+  /* ---------- topbar ---------- */
+  .topbar{height:58px;flex:0 0 58px;display:flex;align-items:center;gap:10px;padding:0 14px;border-bottom:1px solid var(--line-soft)}
+  .tb-title{display:flex;flex-direction:column;min-width:0;gap:1px}
+  .tb-main{font-size:13.5px;font-weight:600;color:#111;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48vw;line-height:1.25}
+  .tb-sub{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;color:#9d9d9d;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:48vw;line-height:1.3}
+  .topbar-actions{margin-left:auto;display:flex;gap:2px}
+  .icon-btn{
+    width:32px;height:32px;border:0;background:transparent;border-radius:8px;
+    display:grid;place-items:center;cursor:pointer;color:#5a5a5a;
+    transition:background .15s var(--ease),color .15s var(--ease);
+  }
+  .icon-btn:hover{background:var(--soft);color:#000}
+  .icon-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .menu-btn{display:none}
+  .close-side{display:none}
+
+  /* ---------- scroll & thread ---------- */
+  .scroll{flex:1;overflow-y:auto;overflow-x:hidden;scroll-behavior:smooth}
+  .scroll::-webkit-scrollbar{width:10px}
+  .scroll::-webkit-scrollbar-thumb{background:#dfdfdf;border-radius:8px;border:3px solid #fff}
+  .scroll::-webkit-scrollbar-thumb:hover{background:#c4c4c4}
+  .thread{max-width:768px;margin:0 auto;padding:26px 24px 18px;min-height:100%;display:flex;flex-direction:column}
+
+  /* ---------- empty state ---------- */
+  .empty{margin:auto 0;padding:3vh 0 2vh;animation:rise .4s var(--ease)}
+  .eyebrow{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted-2);margin-bottom:18px}
+  .eyebrow::before{content:"";width:7px;height:7px;background:#000;border-radius:2px}
+  h1{font-size:clamp(30px,5.2vw,48px);line-height:1.05;letter-spacing:-.035em;font-weight:600;margin:0 0 16px}
+  .empty p.sub{font-size:15px;color:#565656;max-width:500px;margin:0 0 28px}
+  .sugg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .sugg button{
+    text-align:left;background:var(--paper);border:1px solid var(--line);border-radius:var(--r);
+    padding:13px 15px;cursor:pointer;transition:border-color .16s var(--ease),transform .16s var(--ease),background .16s;
+  }
+  .sugg button:hover{border-color:#000;transform:translateY(-1px)}
+  .sugg button:active{transform:translateY(0);background:var(--soft)}
+  .sugg .idx{display:block;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;color:var(--muted-2);margin-bottom:8px}
+  .sugg b{display:block;font-size:13.5px;font-weight:600;letter-spacing:-.01em;margin-bottom:3px}
+  .sugg .d{display:block;font-size:12px;color:var(--muted);line-height:1.45}
+  .free-note{font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--muted-2);margin:20px 0 0}
+
+  /* ---------- messages ---------- */
+  .messages{display:flex;flex-direction:column}
+  .msg{display:flex;gap:14px;padding:15px 0;animation:rise .28s var(--ease)}
+  .msg.user{justify-content:flex-end}
+  .msg.user .u-wrap{display:flex;flex-direction:column;align-items:flex-end;max-width:min(82%,560px);min-width:0}
+  .msg.user .bubble{
+    background:var(--soft);border-radius:16px;padding:10px 15px;
+    max-width:100%;white-space:pre-wrap;word-break:break-word;overflow-wrap:anywhere;font-size:15px;
+  }
+  .msg.user .actions{justify-content:flex-end}
+  .avatar{
+    flex:0 0 27px;width:27px;height:27px;border-radius:7px;background:#000;color:#fff;
+    display:grid;place-items:center;font-family:var(--mono);font-size:10px;margin-top:1px;
+  }
+  .msg.ai .body{min-width:0;flex:1}
+  .prose{font-size:15.5px;color:#111;overflow-wrap:anywhere}
+  .prose p{margin:0 0 12px}
+  .prose p:last-child{margin-bottom:0}
+  .prose strong{font-weight:650}
+  .prose h4{font-size:14px;margin:18px 0 8px;font-weight:650}
+  .prose ul,.prose ol{margin:0 0 12px;padding-left:21px}
+  .prose li{margin:4px 0}
+  .prose code{font-family:var(--mono);font-size:12.8px;background:#f2f2f2;border-radius:5px;padding:1px 5px}
+  .prose pre{background:#0a0a0a;color:#f2f2f2;border-radius:12px;padding:15px 17px;overflow-x:auto;margin:14px 0}
+  .prose pre code{background:none;padding:0;color:inherit;font-size:12.8px;line-height:1.6}
+  .prose blockquote{margin:12px 0;padding:2px 0 2px 14px;border-left:2px solid #000;color:#333}
+  .stream{white-space:pre-wrap;overflow-wrap:anywhere;font-size:15.5px}
+  .stream .caret{display:inline-block;width:7px;height:16px;background:#000;vertical-align:-2px;margin-left:2px;animation:blink 1s steps(2) infinite}
+  .fade-in{animation:fade .28s var(--ease)}
+
+  .actions{display:flex;gap:2px;margin-top:10px;align-items:center}
+  .msg:hover .actions,.msg:focus-within .actions{opacity:1}
+  .act{
+    width:30px;height:30px;padding:0;border:1px solid transparent;background:transparent;border-radius:6px;
+    display:grid;place-items:center;color:#5c5c5c;cursor:pointer;
+    transition:background .14s var(--ease),color .14s var(--ease),border-color .14s var(--ease);
+  }
+  .act svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+  .act:hover{color:#000;background:var(--soft);border-color:var(--line)}
+  .act-sep{width:1px;height:14px;background:var(--line);margin:0 5px}
+
+  .typing{display:flex;gap:4px;align-items:center;height:24px}
+  .typing i{width:6px;height:6px;background:#111;border-radius:50%;animation:bounce 1.1s infinite var(--ease)}
+  .typing i:nth-child(2){animation-delay:.14s}
+  .typing i:nth-child(3){animation-delay:.28s}
+
+  /* ---------- note view ---------- */
+  .note-view{max-width:768px;margin:0 auto;padding:26px 24px 22px;min-height:100%;display:flex;flex-direction:column}
+  .note-eyebrow{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:#a5a5a5;margin-bottom:9px}
+  .note-title{
+    width:100%;border:0;border-bottom:1px solid var(--line);background:transparent;
+    font-size:26px;font-weight:600;letter-spacing:-.022em;padding:0 0 10px;outline:0;color:#000;line-height:1.25;
+  }
+  .note-title::placeholder{color:#c6c6c6}
+  .note-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 4px}
+  .note-status{font-family:var(--mono);font-size:9.5px;color:#a8a8a8;letter-spacing:.03em}
+  .note-btn{
+    border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 10px;
+    font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:#555;cursor:pointer;
+    transition:border-color .15s var(--ease),color .15s var(--ease);
+  }
+  .note-btn:hover{border-color:#000;color:#000}
+  .note-body{
+    flex:1;width:100%;min-height:340px;border:0;outline:0;resize:none;background:transparent;
+    font-size:15.5px;line-height:1.78;color:#1a1a1a;padding:10px 0 0;
+  }
+  .note-body::placeholder{color:#b5b5b5}
+  .note-actions{margin-top:8px;padding-top:10px;border-top:1px solid var(--line-soft)}
+
+  /* ---------- composer ---------- */
+  .composer-wrap{padding:6px 24px 10px;background:linear-gradient(to top,#fff 70%,rgba(255,255,255,.86))}
+  .composer{
+    max-width:768px;margin:0 auto;position:relative;background:#fff;
+    border:1px solid #dcdcdc;border-radius:18px;padding:11px 11px 8px;
+    transition:border-color .18s var(--ease),box-shadow .18s var(--ease);
+  }
+  .composer:focus-within{border-color:#000;box-shadow:0 0 0 3px rgba(0,0,0,.055)}
+  .composer textarea{
+    display:block;width:100%;border:0;outline:0;resize:none;background:transparent;
+    font:inherit;font-size:15.5px;line-height:1.55;padding:4px 6px 2px;max-height:180px;color:#111;
+  }
+  .composer textarea::placeholder{color:#9d9d9d}
+  .composer textarea:disabled{color:#aaa;cursor:not-allowed}
+  .composer-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+  .composer-row .right{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .model-chip{
+    display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;
+    border-radius:999px;padding:5px 10px;font-family:var(--mono);font-size:11px;
+    cursor:pointer;transition:border-color .15s var(--ease);color:#111;
+  }
+  .model-chip:hover{border-color:#000}
+  .model-chip svg{width:10px;height:10px;fill:none;stroke:currentColor;stroke-width:1.8}
+  .model-chip .live{width:5px;height:5px;border-radius:50%;background:#000}
+  .icon-btn.small{width:30px;height:30px}
+  .count{font-family:var(--mono);font-size:10px;color:#b3b3b3;letter-spacing:.04em}
+  .send{
+    width:34px;height:34px;border-radius:50%;border:0;background:#000;color:#fff;cursor:pointer;
+    display:grid;place-items:center;transition:background .16s var(--ease),transform .16s var(--ease);
+  }
+  .send svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+  .send:disabled{background:#d9d9d9;cursor:not-allowed}
+  .send:not(:disabled):hover{transform:translateY(-1px)}
+  .send:not(:disabled):active{transform:translateY(0) scale(.96)}
+  .send.is-stop{background:#000}
+  .send .sq{display:none;width:9px;height:9px;background:#fff;border-radius:2px}
+  .send.is-stop .arw{display:none}
+  .send.is-stop .sq{display:block}
+  .disclaimer{max-width:768px;margin:8px auto 0;text-align:center;font-family:var(--mono);font-size:10px;color:#a8a8a8}
+
+  /* ---------- model menu ---------- */
+  .model-menu{
+    position:absolute;bottom:calc(100% + 8px);left:0;width:min(330px,calc(100vw - 48px));
+    background:#fff;border:1px solid var(--line);border-radius:14px;padding:6px;
+    box-shadow:0 18px 44px rgba(0,0,0,.13);z-index:20;animation:pop .16s var(--ease);
+  }
+  .model-menu .mm-label{font-family:var(--mono);font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted-2);padding:7px 10px 5px}
+  .model-opt{
+    display:flex;gap:10px;align-items:flex-start;width:100%;text-align:left;border:0;background:transparent;
+    padding:9px 10px;border-radius:9px;cursor:pointer;
+  }
+  .model-opt:hover{background:var(--soft)}
+  .model-opt .mo-dot{width:7px;height:7px;border-radius:50%;background:#000;margin-top:7px;flex:0 0 7px;opacity:.2}
+  .model-opt[aria-checked="true"]{background:var(--soft)}
+  .model-opt[aria-checked="true"] .mo-dot{opacity:1}
+  .mo-name{font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:7px}
+  .mo-meta{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .mo-check{margin-left:auto;font-size:12px;opacity:0}
+  .model-opt[aria-checked="true"] .mo-check{opacity:1}
+
+  /* ---------- sidebar ---------- */
+  .side-head{display:flex;align-items:center;justify-content:space-between;padding:18px 16px 12px}
+  .brand{display:flex;align-items:center;gap:9px}
+  .mark{width:17px;height:17px;border-radius:50%;background:#000;position:relative}
+  .mark::after{content:"";position:absolute;inset:4.5px;background:#fff;border-radius:50%}
+  .brand-name{font-size:15px;font-weight:700;letter-spacing:.04em}
+  .tag{font-family:var(--mono);font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted-2);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+
+  .search{display:flex;align-items:center;gap:8px;margin:0 16px 4px;border:1px solid var(--line);border-radius:9px;padding:6px 9px;transition:border-color .15s}
+  .search:focus-within{border-color:#000}
+  .search svg{width:13px;height:13px;fill:none;stroke:#9a9a9a;stroke-width:1.8;flex:0 0 13px}
+  .search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:12.5px;color:#111}
+  .search input::placeholder{color:#aaa}
+  .search kbd{font-family:var(--mono);font-size:9px;color:#b5b5b5;border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+
+  .general-wrap{
+    display:flex;align-items:stretch;margin:4px 16px 8px;background:#fff;border:1px solid #000;
+    border-radius:11px;overflow:hidden;transition:background .16s var(--ease),border-color .16s var(--ease);
+  }
+  .general-btn{
+    flex:1;min-width:0;display:flex;align-items:center;gap:9px;border:0;background:none;color:#000;
+    padding:8px 8px 8px 12px;text-align:left;cursor:pointer;
+  }
+  .general-btn svg{width:15px;height:15px;flex:0 0 15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .general-txt{display:flex;flex-direction:column;min-width:0;gap:1px}
+  .general-name{font-size:13px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .general-sub{font-family:var(--mono);font-size:9px;letter-spacing:.02em;color:#6f6f6f;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .general-add{
+    flex:0 0 34px;width:34px;border:0;border-left:1px solid var(--line);background:none;color:#000;
+    font-size:16px;line-height:1;cursor:pointer;opacity:.72;
+    transition:opacity .14s var(--ease),background .14s var(--ease);
+  }
+  .general-add:hover{opacity:1;background:var(--soft)}
+  .general-wrap.active .general-btn svg{fill:#000}
+
+  .general-list{margin:0 0 2px}
+  .general-list .tree-btn{padding-left:16px;font-size:12.5px}
+
+  .attach-row{display:flex;flex-wrap:wrap;gap:6px;padding:2px 6px 8px}
+  .attach-chip{
+    display:flex;align-items:center;gap:7px;max-width:100%;border:1px solid var(--line);background:var(--soft);
+    border-radius:8px;padding:4px 7px;font-size:11.5px;color:#333;
+  }
+  .attach-chip .nm{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .attach-chip .sz{font-family:var(--mono);font-size:9.5px;color:#8f8f8f}
+  .attach-chip .rm{border:0;background:none;color:#8a8a8a;cursor:pointer;font-size:14px;line-height:1;padding:0 1px}
+  .attach-chip .rm:hover{color:#000}
+
+  .attach-menu{
+    position:absolute;bottom:46px;left:0;width:min(262px,calc(100vw - 40px));background:#fff;
+    border:1px solid var(--line);border-radius:12px;padding:5px;
+    box-shadow:0 16px 36px rgba(0,0,0,.14);z-index:22;animation:pop .16s var(--ease);
+  }
+  .attach-menu button{
+    display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;text-align:left;
+    padding:8px 10px;border-radius:8px;font-size:13px;color:#222;cursor:pointer;
+  }
+  .attach-menu button:hover{background:var(--soft)}
+  .attach-menu svg{width:15px;height:15px;flex:0 0 15px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+  .msg-files{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+  .file-chip{
+    display:inline-flex;align-items:center;gap:6px;border:1px solid #e2e2e2;background:#fff;
+    border-radius:7px;padding:3px 7px;font-size:11px;color:#444;max-width:100%;
+  }
+  .file-chip .nm{max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+  .side-scroll{flex:1;overflow-y:auto;padding:0 8px 12px}
+  .side-scroll::-webkit-scrollbar{width:8px}
+  .side-scroll::-webkit-scrollbar-thumb{background:#e6e6e6;border-radius:8px;border:2px solid #fff}
+
+  .group-row{display:flex;align-items:center;justify-content:space-between;padding:14px 9px 4px}
+  .group-label{font-family:var(--mono);font-size:9px;letter-spacing:.13em;text-transform:uppercase;color:#111;font-weight:600}
+  .group-toggle{display:flex;align-items:center;gap:6px;border:0;background:none;padding:0;cursor:pointer;color:#111}
+  .group-toggle svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s var(--ease)}
+  .group-toggle[aria-expanded="false"] svg{transform:rotate(-90deg)}
+  .group-row .group-label{padding:0}
+  .mini-add{
+    width:20px;height:20px;border:0;background:none;border-radius:5px;color:#9a9a9a;
+    font-size:14px;line-height:1;display:grid;place-items:center;cursor:pointer;
+    transition:background .14s var(--ease),color .14s var(--ease);
+  }
+  .mini-add:hover{background:#e8e8e8;color:#000}
+
+  .tree-row{display:flex;align-items:center;position:relative;border-radius:8px;transition:background .14s var(--ease)}
+  .tree-row:hover{background:var(--soft)}
+  .tree-row.active{background:var(--soft-2);box-shadow:inset 2px 0 0 #000}
+  .tree-btn{
+    flex:1;min-width:0;text-align:left;border:0;background:none;border-radius:8px;
+    padding:7px 4px 7px 9px;font-size:13px;color:#2e2e2e;cursor:pointer;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .tree-row.active .tree-btn{font-weight:600;color:#000}
+  .tree-row.child .tree-btn{padding-left:34px;font-size:12.5px;color:#3c3c3c}
+  .more-btn{
+    flex:0 0 22px;width:22px;height:22px;margin-right:4px;border:0;background:none;border-radius:5px;
+    color:#8a8a8a;font-size:15px;line-height:1;display:grid;place-items:center;cursor:pointer;
+    opacity:0;transition:opacity .14s var(--ease),background .14s var(--ease);
+  }
+  .tree-row:hover .more-btn,.tree-row:focus-within .more-btn,.more-btn[aria-expanded="true"]{opacity:1}
+  .more-btn:hover{background:#dedede;color:#000}
+
+  .spec-row{display:flex;align-items:center;border-radius:8px;transition:background .14s var(--ease)}
+  .spec-row:hover{background:var(--soft)}
+  .spec-row.active{background:var(--soft-2);box-shadow:inset 2px 0 0 #000}
+  .spec-main{
+    flex:1;min-width:0;display:flex;align-items:center;gap:9px;border:0;background:none;
+    padding:7px 4px 7px 9px;font-size:13px;color:#2e2e2e;text-align:left;cursor:pointer;
+  }
+  .spec-row.active .spec-main{font-weight:600;color:#000}
+  .spec-main svg{width:15px;height:15px;flex:0 0 15px;fill:none;stroke:#5a5a5a;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+  .spec-row.active .spec-main svg{stroke:#000}
+  .spec-name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .spec-add,.spec-caret{
+    flex:0 0 22px;width:22px;height:22px;border:0;background:none;border-radius:5px;color:#9a9a9a;
+    display:grid;place-items:center;cursor:pointer;opacity:.55;
+    transition:opacity .14s var(--ease),background .14s var(--ease),color .14s var(--ease);
+  }
+  .spec-add{font-size:15px;line-height:1}
+  .spec-caret svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;transition:transform .18s var(--ease)}
+  .spec-row:hover .spec-add,.spec-row:hover .spec-caret{opacity:1}
+  .spec-add:hover,.spec-caret:hover{background:#dedede;color:#000}
+  .spec-caret[aria-expanded="true"] svg{transform:rotate(180deg)}
+  .spec-caret.is-empty{visibility:hidden}
+
+  .rename-input{
+    flex:1;min-width:0;margin:2px 4px;border:1px solid #000;border-radius:6px;
+    padding:5px 7px;font-size:12.5px;outline:none;background:#fff;color:#000;
+  }
+  .chat-empty{font-size:12px;color:#a5a5a5;padding:8px 9px 4px}
+
+  .side-foot{border-top:1px solid var(--line);padding:13px 16px 14px;display:flex;flex-direction:column;gap:9px}
+  .quota-top{display:flex;justify-content:space-between;align-items:baseline;font-size:11.5px;color:var(--muted)}
+  .quota-top b{font-family:var(--mono);font-size:11px;font-weight:500;color:#000}
+  .bar{height:3px;background:#ececec;border-radius:2px;overflow:hidden;margin-top:6px}
+  .bar i{display:block;height:100%;background:#000;transition:width .32s var(--ease)}
+  .status{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}
+  .dot{width:6px;height:6px;border-radius:50%;background:#000}
+  .foot-links{display:flex;gap:14px;margin-top:1px}
+  .foot-link{border:0;background:none;padding:0;font-size:12px;color:#565656;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+  .foot-link:hover{color:#000}
+  .proto{font-family:var(--mono);font-size:9.5px;line-height:1.5;color:#b8b8b8;margin:2px 0 0}
+
+  /* ---------- row menu ---------- */
+  .row-menu{
+    position:fixed;z-index:70;min-width:180px;background:#fff;border:1px solid var(--line);
+    border-radius:10px;padding:4px;box-shadow:0 16px 36px rgba(0,0,0,.15);
+  }
+  .row-menu button{
+    display:flex;align-items:center;gap:9px;width:100%;border:0;background:none;text-align:left;
+    padding:7px 9px;border-radius:6px;font-size:12.5px;color:#222;cursor:pointer;
+  }
+  .row-menu button:hover{background:var(--soft)}
+  .row-menu svg{width:13px;height:13px;flex:0 0 13px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+
+  /* ---------- overlay / dialog / toast ---------- */
+  .overlay{position:fixed;inset:0;background:rgba(0,0,0,.34);z-index:35;opacity:0;pointer-events:none;transition:opacity .2s var(--ease)}
+  .overlay.show{opacity:1;pointer-events:auto}
+  .overlay[hidden]{display:none}
+
+  dialog.dlg{border:0;padding:0;border-radius:16px;width:min(480px,92vw);color:#111;background:#fff;box-shadow:0 24px 70px rgba(0,0,0,.22)}
+  dialog.dlg::backdrop{background:rgba(0,0,0,.34)}
+  .dlg-in{padding:22px 22px 20px}
+  .dlg-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .dlg h3{margin:0;font-size:16px;letter-spacing:-.01em}
+  .dlg p{font-size:13.5px;color:#444;margin:0 0 12px}
+  .dlg ul{margin:0;padding-left:18px;font-size:13.5px;color:#444}
+  .dlg li{margin:7px 0}
+  .dlg kbd{font-family:var(--mono);font-size:11px;background:#f3f3f3;border:1px solid #e0e0e0;border-radius:4px;padding:1px 5px}
+  .dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px}
+  .btn-ghost{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 14px;font-size:13px;cursor:pointer}
+  .btn-ghost:hover{border-color:#000}
+  .btn-solid{border:1px solid #000;background:#000;color:#fff;border-radius:8px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer}
+  .btn-solid:hover{opacity:.85}
+
+  .toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,10px);
+    background:#000;color:#fff;font-size:12.5px;padding:9px 15px;border-radius:999px;
+    opacity:0;pointer-events:none;transition:opacity .2s var(--ease),transform .2s var(--ease);z-index:80;
+    max-width:86vw;text-align:center;
+  }
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+
+  @keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  @keyframes pop{from{opacity:0;transform:translateY(5px) scale(.99)}to{opacity:1;transform:none}}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0);opacity:.35}30%{transform:translateY(-4px);opacity:1}}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:900px){
+    .sidebar{
+      position:fixed;top:0;left:0;height:100dvh;width:min(322px,88vw);
+      transform:translateX(-101%);transition:transform .26s var(--ease);border-right:1px solid var(--line);
+    }
+    .sidebar.open{transform:none;box-shadow:24px 0 60px rgba(0,0,0,.12)}
+    .menu-btn{display:grid}
+    .close-side{display:grid}
+    .thread{padding:18px 16px 14px}
+    .note-view{padding:18px 16px 14px}
+    .composer-wrap{padding:4px 12px 8px}
+    .sugg{grid-template-columns:1fr;gap:8px}
+    .empty p.sub{font-size:14.5px;margin-bottom:22px}
+    .tb-main,.tb-sub{max-width:54vw}
+  }
+  @media (max-width:420px){
+    .count{display:none}
+    .sugg .d{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important;transition-duration:.001ms !important}
+    .scroll{scroll-behavior:auto}
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar" id="sidebar" aria-label="Меню">
+    <div class="side-head">
+      <div class="brand">
+        <span class="mark" aria-hidden="true"></span>
+        <span class="brand-name">КРУГ</span>
+        <span class="tag">beta</span>
+      </div>
+      <button class="icon-btn close-side" id="closeSide" aria-label="Закрыть меню">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+
+    <div class="search">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
+      <label class="sr" for="search">Поиск по чатам и заметкам</label>
+      <input id="search" placeholder="Поиск по чатам" autocomplete="off">
+      <kbd>⌘K</kbd>
+    </div>
+
+    <div class="general-wrap" id="generalWrap">
+      <button type="button" class="general-btn" id="generalBtn" title="Общий чат · ответ на любой вопрос">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.5 14 9.8 20.5 12 14 14.2 12 20.5 10 14.2 3.5 12 10 9.8Z"/></svg>
+        <span class="general-txt"><span class="general-name">Общий чат</span><span class="general-sub">Ответ на любой вопрос</span></span>
+      </button>
+      <button type="button" class="general-add" id="generalAdd" title="Новый чат" aria-label="Новый чат в общем чате">+</button>
+    </div>
+
+    <div class="side-scroll">
+      <nav id="generalList" class="general-list" aria-label="Чаты общего чата"></nav>
+
+      <div class="group-row">
+        <button type="button" class="group-toggle" id="notesToggle" aria-expanded="true" aria-controls="noteList">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          <span class="group-label">Блокнот</span>
+        </button>
+        <button class="mini-add" id="noteAdd" title="Новая заметка" aria-label="Новая заметка">+</button>
+      </div>
+      <nav id="noteList" aria-label="Заметки"></nav>
+
+      <div class="group-row">
+        <span class="group-label">AI-ассистенты</span>
+      </div>
+      <nav id="specList" aria-label="Специализации и чаты"></nav>
+    </div>
+
+    <div class="side-foot">
+      <div class="quota">
+        <div class="quota-top"><span>Бесплатно сегодня</span><b id="quotaText">12 / 50</b></div>
+        <div class="bar" role="progressbar" aria-label="Дневной лимит" aria-valuemin="0" aria-valuemax="50" aria-valuenow="12" id="quotaBarWrap"><i id="quotaBar" style="width:24%"></i></div>
+      </div>
+      <div class="status"><span class="dot" aria-hidden="true"></span> 3 пула моделей онлайн</div>
+      <div class="foot-links">
+        <button type="button" class="foot-link" id="aboutBtn">О проекте</button>
+        <button type="button" class="foot-link" id="keysBtn">Горячие клавиши</button>
+      </div>
+      <p class="proto">Прототип интерфейса<br>ответы демонстрационные</p>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="icon-btn menu-btn" id="menuBtn" aria-label="Открыть меню" aria-controls="sidebar" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+      <div class="tb-title">
+        <span class="tb-main" id="chatTitle">Общий чат</span>
+        <span class="tb-sub" id="chatSub">Ответ на любой вопрос</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="clearBtn" title="Очистить диалог" aria-label="Очистить диалог">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+        </button>
+        <button class="icon-btn" id="shareBtn" title="Скопировать ссылку" aria-label="Скопировать ссылку">
+          <svg viewBox="0 0 24 24"><path d="M12 15V3M8 7l4-4 4 4M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="scroll" id="scroll">
+      <div class="thread" id="thread">
+        <section class="empty" id="empty">
+          <div class="eyebrow" id="eyebrow">Общий чат · бесплатно</div>
+          <h1 id="heroTitle">Спроси у Вселенной</h1>
+          <p class="sub" id="heroSub">Ответ на любой вопрос</p>
+          <div class="sugg" id="sugg"></div>
+          <p class="free-note">Без регистрации · 50 запросов в день</p>
+        </section>
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-label="Сообщения"></div>
+      </div>
+
+      <div class="note-view is-hidden" id="noteView">
+        <div class="note-eyebrow">Блокнот</div>
+        <input class="note-title" id="noteTitle" maxlength="90" placeholder="Без названия" aria-label="Название заметки">
+        <div class="note-tools">
+          <span class="note-status" id="noteStatus">Сохранено</span>
+        </div>
+        <textarea class="note-body" id="noteBody" placeholder="Пишите здесь. Всё сохраняется автоматически — можно вставлять тексты и ссылки." aria-label="Текст заметки"></textarea>
+        <div class="actions note-actions" id="noteActions" aria-label="Действия с заметкой"></div>
+      </div>
+    </div>
+
+    <div class="composer-wrap" id="composerWrap">
+      <form class="composer" id="composer" autocomplete="off">
+        <label class="sr" for="input">Сообщение</label>
+        <div class="attach-row" id="attachRow" hidden></div>
+        <textarea id="input" rows="1" maxlength="4000" placeholder="Напишите что угодно…"></textarea>
+        <div class="composer-row">
+          <button type="button" class="model-chip" id="modelChip" aria-haspopup="true" aria-expanded="false" aria-controls="modelMenu">
+            <span class="live"></span><span id="modelName">Быстрая</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>
+          </button>
+          <button type="button" class="icon-btn small" id="attachBtn" title="Прикрепить файл" aria-label="Прикрепить файл" aria-haspopup="true" aria-expanded="false" aria-controls="attachMenu">
+            <svg viewBox="0 0 24 24"><path d="M20 11.5 12 19.5a5 5 0 0 1-7-7l8-8a3.5 3.5 0 0 1 5 5l-8 8a2 2 0 0 1-3-3l7-7"/></svg>
+          </button>
+          <div class="right">
+            <span class="count" id="count">0/4000</span>
+            <button type="submit" class="send" id="send" aria-label="Отправить" disabled>
+              <svg class="arw" viewBox="0 0 24 24"><path d="M12 19V5M6 11l6-6 6 6"/></svg>
+              <span class="sq" aria-hidden="true"></span>
+            </button>
+          </div>
+        </div>
+
+        <div class="model-menu" id="modelMenu" hidden role="menu" aria-label="Выбор модели">
+          <div class="mm-label">Пул моделей</div>
+          <button type="button" class="model-opt" role="menuitemradio" aria-checked="true" data-model="fast">
+            <span class="mo-dot"></span>
+            <span><span class="mo-name">Быстрая</span><span class="mo-meta">Groq · Llama 3.3 70B — отвечает за секунду</span></span>
+            <span class="mo-check">✓</span>
+          </button>
+          <button type="button" class="model-opt" role="menuitemradio" aria-checked="false" data-model="smart">
+            <span class="mo-dot"></span>
+            <span><span class="mo-name">Умная</span><span class="mo-meta">OpenRouter · free pool — лучше рассуждает</span></span>
+            <span class="mo-check">✓</span>
+          </button>
+          <button type="button" class="model-opt" role="menuitemradio" aria-checked="false" data-model="local">
+            <span class="mo-dot"></span>
+            <span><span class="mo-name">Локальная</span><span class="mo-meta">Ollama · Qwen 2.5 — без интернета</span></span>
+            <span class="mo-check">✓</span>
+          </button>
+        </div>
+
+        <div class="attach-menu" id="attachMenu" hidden role="menu" aria-label="Прикрепить файл">
+          <button type="button" data-attach="image" role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="M4 17l5-5 4 4 2-2 5 5"/></svg>
+            Добавить изображения
+          </button>
+          <button type="button" data-attach="file" role="menuitem">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13 3v6h6"/></svg>
+            Добавить файлы
+          </button>
+        </div>
+        <input type="file" id="fileImage" accept="image/*" multiple class="sr" tabindex="-1" aria-hidden="true">
+        <input type="file" id="fileAny" multiple class="sr" tabindex="-1" aria-hidden="true">
+      </form>
+      <p class="disclaimer">КРУГ — инструмент специалиста, а не замена консультации. Проверяйте выводы.</p>
+    </div>
+  </main>
+
+  <div class="overlay" id="overlay" hidden></div>
+</div>
+
+<div class="row-menu" id="rowMenu" hidden role="menu">
+  <button type="button" data-act="rename" role="menuitem">
+    <svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16v4Z"/><path d="M14 6l4 4"/></svg>
+    Переименовать
+  </button>
+  <button type="button" data-act="delete" role="menuitem">
+    <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg>
+    Удалить
+  </button>
+</div>
+
+<dialog class="dlg" id="dlg">
+  <div class="dlg-in">
+    <div class="dlg-head">
+      <h3 id="dlgTitle">Заголовок</h3>
+      <button class="icon-btn" id="dlgClose" aria-label="Закрыть">
+        <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <div id="dlgBody"></div>
+  </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  const $ = (s, r) => (r || document).querySelector(s);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const KEY = 'krug.workspace.v2';
+  const LIMIT = 50;
+
+  const MODELS = {
+    fast:  { name: 'Быстрая',   speed: 8  },
+    smart: { name: 'Умная',     speed: 15 },
+    local: { name: 'Локальная', speed: 21 }
+  };
+
+  const ICONS = {
+    general: '<path d="M12 3.5 14 9.8 20.5 12 14 14.2 12 20.5 10 14.2 3.5 12 10 9.8Z"/>',
+    astro: '<circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="9" stroke-dasharray="2 3"/>',
+    tarot: '<rect x="6.5" y="3.5" width="11" height="17" rx="2"/><path d="M12 8v8M9 12h6"/>',
+    numero: '<path d="M8.5 4 6.5 20M17.5 4l-2 16M4 9h16M3 15h16"/>',
+    hypno: '<path d="M12 12a2.2 2.2 0 0 1 2.2 2.2A3.4 3.4 0 0 1 10.8 17.6 5 5 0 0 1 5.8 12.6 7 7 0 0 1 12.8 5.6 9 9 0 0 1 21.4 14.6"/>',
+    psycho: '<path d="M12 4a6.5 6.5 0 0 0 0 13h1.5v3l3.5-3.6A6.5 6.5 0 0 0 12 4Z"/><path d="M9.5 9.5h5M9.5 12.5h3"/>',
+    eso: '<circle cx="12" cy="12" r="9"/><path d="M12 6.5 17.5 17h-11z"/>'
+  };
+
+  const SPECS = [
+    {
+      id: 'general',
+      name: 'Общий чат',
+      sub: 'Ответ на любой вопрос',
+      eyebrow: 'Общий чат',
+      head: 'Спроси у Вселенной',
+      lead: 'Ответ на любой вопрос',
+      ph: 'Напишите что угодно…',
+      isGeneral: true,
+      kw: ['что', 'как', 'почему', 'зачем', 'стоит', 'выбор', 'выбрать', 'ситуац', 'иде', 'смысл', 'делать', 'можн'],
+      sugg: [
+        { t:'Разбери ситуацию', d:'что происходит и почему', q:'Разбери мою ситуацию: что происходит и почему' },
+        { t:'Помоги выбрать', d:'между двумя вариантами', q:'Помоги выбрать между двумя вариантами' },
+        { t:'Проверь идею', d:'стоит ли начинать', q:'Проверь идею: стоит ли начинать' },
+        { t:'Просто поговори', d:'без структуры и запроса', q:'Просто поговори со мной' }
+      ],
+      answer: 'Отвечу на любой вопрос — от бытового до того, который неудобно задать вслух.\n\n**Как я смотрю на вопрос**\n\n1. Что происходит на самом деле — факты, а не тревога.\n2. Что здесь зависит от вас, а что нет.\n3. Какой следующий шаг даст больше ясности.\n\n**Если вопрос про выбор**\n\nНе «что лучше», а «что вы потеряете в каждом варианте». Потеря обычно честнее выгоды.\n\n**Если вопрос про смысл**\n\nСмысл редко приходит от готового ответа. Чаще — от точной формулировки вопроса. Поэтому иногда я сначала переформулирую.\n\nСпрашивайте как есть, без подготовки. Нужен короткий ответ — скажите «коротко», нужен разбор — скажите «подробно».',
+      fallback: 'Спрашивайте что угодно — я не буду требовать «правильной» формулировки.\n\nМогу:\n\n- разобрать ситуацию по фактам\n- помочь выбрать между вариантами\n- объяснить сложное простыми словами\n- просто выслушать и задать вопросы\n\nЕсли вопрос про карты, карту или расклад — лучше переключиться на нужную специализацию слева: там ответ будет точнее по методу.\n\nА если вопрос общий — пишите здесь.'
+    },
+    {
+      id: 'astro',
+      name: 'Астрология',
+      sub: 'натальная карта · транзиты · прогноз',
+      head: 'Натальная карта и прогноз.',
+      lead: 'Разберу карту по домам и аспектам, объясню транзиты и подберу дату для важного шага.',
+      ph: 'Дата, время и город рождения — или ваш вопрос…',
+      kw: ['карт', 'транзит', 'сатурн', 'лун', 'аспект', 'запуск', 'рожд', 'дом', 'знак', 'ректифик'],
+      sugg: [
+        { t:'Разбери натальную карту', d:'Солнце, Луна, Асцендент', q:'Разбери натальную карту: Солнце, Луна, Асцендент' },
+        { t:'Транзит Сатурна', d:'что происходит и как проживать', q:'Что делает транзит Сатурна и как его проживать' },
+        { t:'Дата для запуска', d:'подбор по лунному календарю', q:'Подбери дату для запуска по лунному календарю' },
+        { t:'Квадрат Луна–Сатурн', d:'без пугающих формулировок', q:'Объясни квадрат Луна–Сатурн без пугающих формулировок' }
+      ],
+      answer: 'Разберу карту по шагам — так, как это удобно делать на консультации.\n\n**1. Каркас**\n\nСначала три вещи: Солнце (ядро личности), Луна (эмоциональная природа) и Асцендент (как человек входит в мир). Без них остальное читается вслепую.\n\n**2. Акценты**\n\n- стихия с перевесом — что даётся легко, а что истощает\n- угловые дома — где жизнь проявляется активнее всего\n- стеллиум — тема, которая повторяется\n\n**3. Напряжения**\n\nКвадраты и оппозиции — не «плохо», а места, где нужна осознанная работа. Именно они дают рост, а не трины.\n\n**4. Прогностика**\n\nТранзиты — что происходит сейчас. Прогрессии — внутренний вектор. Соляр — тема года.\n\nПришлите дату, время и город рождения — соберу разбор под конкретную карту. Если время неизвестно, начнём с ректификации или с Солнца и Луны.',
+      fallback: 'Уточню, чтобы ответ был по делу.\n\nДля разбора нужны дата рождения, время (максимально точное) и город. Если время неизвестно — пойдём через Солнце и Луну, без домов.\n\nДальше выберите, что важнее сейчас:\n\n- понять себя — натальная карта\n- понять период — транзиты и прогрессии\n- выбрать дату — подбор по Луне\n\nНапишите запрос своими словами — переведу его в конкретную астрологическую задачу.'
+    },
+    {
+      id: 'tarot',
+      name: 'Таро',
+      sub: 'расклад · трактовка · вопрос',
+      head: 'Расклад и трактовка.',
+      lead: 'Сформулирую вопрос, разложу и объясню каждую карту — без фатализма и общих слов.',
+      ph: 'Задайте вопрос для расклада…',
+      kw: ['расклад', 'карт', 'башн', 'таро', 'колод', 'аркан', 'вопрос', 'путь'],
+      sugg: [
+        { t:'Расклад на три карты', d:'прошлое, настоящее, вектор', q:'Сделай расклад на три карты: прошлое, настоящее, вектор' },
+        { t:'Что значит Башня', d:'в позиции будущего', q:'Что значит Башня в позиции будущего' },
+        { t:'Сформулируй вопрос', d:'чтобы карты отвечали', q:'Помоги сформулировать вопрос для расклада' },
+        { t:'Выбор пути', d:'два варианта, один выбор', q:'Сделай расклад на выбор пути между двумя вариантами' }
+      ],
+      answer: 'Сделаю расклад на три карты — прошлое, настоящее, вектор.\n\n**Как формулировать вопрос**\n\nНе «что меня ждёт», а «что мешает принять решение». Вопрос с глаголом и фокусом на себе даёт рабочий расклад, а не гадание.\n\n**Схема**\n\n1. Что привело сюда — корень ситуации.\n2. Где вы сейчас — реальное положение, а не желаемое.\n3. Куда ведёт текущая линия — если ничего не менять.\n\n**Важно**\n\nКарты не предсказывают фатально. Они показывают конфигурацию энергий и точку, где есть выбор. В раскладе на отношения четвёртой картой добавляю «урок» — то, что человеку нужно понять.\n\nНазовите вопрос и колоду (Райдер–Уэйт, Марсель, Тота) — разложу с трактовкой именно в этой системе.',
+      fallback: 'Прежде чем тянуть карты, сформулируем вопрос.\n\nПравила, которые делают расклад рабочим:\n\n- вопрос про вас, а не про «что он сделает»\n- есть развилка или выбор — иначе расклад не о чем\n- срок обозначен: месяц, три, полгода\n\nНапишите вопрос и укажите колоду. Предложу схему: три карты, кельтский крест или авторскую — под ваш запрос.'
+    },
+    {
+      id: 'numero',
+      name: 'Нумерология',
+      sub: 'число судьбы · личный год · матрица',
+      head: 'Числа вашей даты.',
+      lead: 'Число судьбы, личный год, матрица Пифагора — с расчётом, который можно проверить.',
+      ph: 'Дата рождения и полное имя…',
+      kw: ['числ', 'судьб', 'матриц', 'пифагор', 'год', 'дата', 'имя', '1111', 'ангельск'],
+      sugg: [
+        { t:'Число судьбы', d:'расчёт по дате рождения', q:'Рассчитай число судьбы по дате рождения' },
+        { t:'Матрица Пифагора', d:'разбор по ячейкам', q:'Разбери матрицу Пифагора по ячейкам' },
+        { t:'Число 1111', d:'ангельские числа', q:'Что значит ангельское число 1111' },
+        { t:'Личный год', d:'цикл из девяти лет', q:'Какой у меня личный год и что это значит' }
+      ],
+      answer: 'Считаю по дате рождения — покажу на примере.\n\n**Число судьбы**\n\nСкладываем все цифры даты до однозначного, кроме мастер-чисел 11, 22, 33.\n\n12.04.1988 → 1+2+0+4+1+9+8+8 = 33 → 3+3 = 6\n\n**Что смотреть дальше**\n\n- число дня рождения — врождённые черты\n- число имени — как вас читают другие\n- матрица Пифагора — баланс качеств по ячейкам\n- личный год — цикл из девяти лет, где вы сейчас\n\n**Осторожно**\n\nНумерология работает как язык описания, а не приговор. Одинаковые числа у двух людей дают разный результат — всё зависит от контекста и от того, что человек с этим делает.\n\nПришлите дату и полное имя — посчитаю все ключевые числа и покажу ход расчёта.',
+      fallback: 'Для расчёта нужны две вещи: дата рождения и полное имя (как в документах).\n\nЧто можем посчитать:\n\n- число судьбы — общий вектор\n- число дня — врождённые черты\n- число имени — как вас читают\n- личный год — где вы в девятилетнем цикле\n- матрица Пифагора — баланс качеств\n\nНапишите данные — начну с числа судьбы и покажу сам расчёт, чтобы его можно было проверить.'
+    },
+    {
+      id: 'hypno',
+      name: 'Гипноз',
+      sub: 'скрипты · индукция · внушение',
+      head: 'Скрипты и трансовые тексты.',
+      lead: 'Индукция, углубление, внушение и мягкий выход — под конкретный запрос клиента.',
+      ph: 'Запрос клиента и длительность сессии…',
+      kw: ['скрипт', 'транс', 'индукц', 'внушен', 'тревог', 'расслаб', 'гипноз', 'пауз'],
+      sugg: [
+        { t:'Скрипт на расслабление', d:'десять минут, мягкая индукция', q:'Напиши скрипт на расслабление на десять минут' },
+        { t:'Работа с тревогой', d:'без директивных внушений', q:'Составь скрипт для работы с тревогой' },
+        { t:'Углубить транс', d:'счёт, образ, пауза', q:'Как углубить транс: счёт, образ, пауза' },
+        { t:'Текст для записи', d:'с паузами и темпом', q:'Сделай текст для аудиозаписи с паузами' }
+      ],
+      answer: 'Соберу скрипт трансовой индукции. Структура, которая работает и вживую, и в записи.\n\n**1. Подстройка**\n\nТемп речи чуть медленнее обычного, паузы после ключевых фраз.\n\n**2. Индукция**\n\nРасслабление по частям — от стоп к лицу. Не «расслабьтесь», а конкретика: «заметьте, как тяжелеют стопы».\n\n**3. Углубление**\n\nСчёт от десяти до одного или образ лестницы. Важен не метод, а ритм.\n\n**4. Работа**\n\nВнушение в позитивной формулировке, без частицы «не». Мозг не обрабатывает отрицание.\n\n**5. Выход**\n\nМягкий, с возвращением ощущений и ясности.\n\n**Этика**\n\nГипноз — не манипуляция. Клиент должен понимать, зачем это, и иметь возможность остановиться в любой момент.\n\nСкажите запрос (тревога, сон, уверенность) и длительность — напишу текст под него.',
+      fallback: 'Опишите запрос и условия: кто клиент, что беспокоит, сколько времени есть, будет ли это вживую или в записи.\n\nОт этого зависит структура:\n\n- короткий скрипт на 5–7 минут — для записи\n- полная сессия — с индукцией, углублением и работой\n- текст на расслабление — без терапевтической цели\n\nСразу скажу: внушения формулируются без частицы «не», а у клиента остаётся возможность выйти из транса в любой момент.'
+    },
+    {
+      id: 'psycho',
+      name: 'Психология',
+      sub: 'запрос · сессия · техника',
+      head: 'От запроса к технике.',
+      lead: 'Помогу сформулировать запрос, структурировать сессию и подобрать инструмент.',
+      ph: 'Опишите запрос или случай обезличенно…',
+      kw: ['запрос', 'сесси', 'техник', 'тревог', 'сопротивлен', 'клиент', 'терап'],
+      sugg: [
+        { t:'Сформулировать запрос', d:'из жалобы в задачу', q:'Помоги сформулировать запрос клиента' },
+        { t:'Первая сессия', d:'что спросить и когда', q:'Какая структура первой сессии' },
+        { t:'Техника при тревоге', d:'дыхание и заземление', q:'Подбери технику при тревоге' },
+        { t:'Сопротивление', d:'без давления', q:'Как работать с сопротивлением клиента' }
+      ],
+      answer: 'Помогу с профессиональной стороны — без диагностики и назначений.\n\n**Первая сессия**\n\n- запрос своими словами, затем уточнение: «что изменится, когда это решится»\n- шкала 0–10: где сейчас и где хотелось бы\n- что уже пробовали и что не сработало\n\n**Формулировка запроса**\n\nРазмытое «хочу спокойствия» → рабочее «хочу выдерживать разговор с руководителем без паники».\n\n**Что важно**\n\nНе давать советов раньше времени. Сначала понять функцию симптома — он почти всегда что-то защищает.\n\n**Границы**\n\nЯ не заменяю супервизию, диагностику и медикаментозное лечение. При признаках острого состояния — направление к врачу.\n\nОпишите случай в обезличенном виде — разберу структуру и предложу технику.',
+      fallback: 'Давайте от общего к конкретному.\n\nОпишите случай обезличенно: что происходит, как давно, что уже пробовали. Затем уточним:\n\n- запрос — что должно измениться\n- функция симптома — что он защищает\n- ресурс — на что можно опереться\n\nДальше подберу структуру сессии или технику. Диагностику и назначения не заменяю — при острых состояниях направление к врачу.'
+    },
+    {
+      id: 'eso',
+      name: 'Эзотерика',
+      sub: 'практики · уровни · смысл',
+      head: 'Практика с объяснением.',
+      lead: 'Разберу ситуацию по уровням и подберу последовательность практик, а не одну «волшебную».',
+      ph: 'Опишите ситуацию…',
+      kw: ['практик', 'заземл', 'очищ', 'сон', 'энерг', 'ситуац', 'пространств'],
+      sugg: [
+        { t:'Разбери ситуацию', d:'по трём уровням', q:'Разбери мою ситуацию по трём уровням' },
+        { t:'Заземление', d:'когда «разносит»', q:'Подбери практику на заземление' },
+        { t:'Очищение пространства', d:'когда дома не отдыхается', q:'Как очистить пространство квартиры' },
+        { t:'Разбери сон', d:'образы и смысл', q:'Разбери мой сон: образы и смысл' }
+      ],
+      answer: 'Смотрю на запрос с нескольких уровней — так, чтобы это была рабочая картина, а не набор красивых слов.\n\n**Три уровня**\n\n1. Событийный — что происходит в жизни.\n2. Энергетический — что истощает, а что наполняет.\n3. Смысловой — какой урок в повторяющейся ситуации.\n\n**Практики**\n\n- заземление — когда «разносит» и много мыслей\n- очищение пространства — когда дома не отдыхается\n- работа с намерением — когда нет ясности, куда двигаться\n\n**Честно**\n\nНи одна практика не заменяет сон, еду, врача и разговор с близкими. Если человек в остром состоянии — сначала база, потом тонкие планы.\n\nОпишите ситуацию — подберу последовательность, а не одну «универсальную» практику.',
+      fallback: 'Разберу ситуацию по уровням, чтобы не уйти в общие слова.\n\n- событийный: что реально происходит\n- энергетический: что забирает силы, что даёт\n- смысловой: какой урок в повторяющемся сценарии\n\nОпишите, что происходит и как давно. Подберу последовательность практик — обычно это две-три, а не одна «универсальная».'
+    }
+  ];
+
+  const ACT_ICONS = {
+    copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/>',
+    share: '<path d="M12 15V4M8.5 7.5 12 4l3.5 3.5"/><path d="M5 14v6h14v-6"/>',
+    save: '<rect x="5" y="3.5" width="14" height="17" rx="2"/><path d="M9 3.5v17"/><path d="M12.5 9h3.5M12.5 13h3.5"/>',
+    regen: '<path d="M20.5 12a8.5 8.5 0 1 1-2.6-6.1"/><path d="M20.5 3.5v5h-5"/>',
+    download: '<path d="M12 4v11M8.5 11.5 12 15l3.5-3.5"/><path d="M5 19.5h14"/>'
+  };
+
+  const SPEC = {};
+  SPECS.forEach(s => { SPEC[s.id] = s; });
+
+  /* ---------- state ---------- */
+  const state = {
+    chats: [
+      { id:'c1', specId:'astro', group:'Сегодня', title:'Транзит Сатурна по Луне', messages:[
+        { role:'user', content:'Что делает транзит Сатурна и как его проживать' },
+        { role:'ai', content: SPEC.astro.answer }
+      ]},
+      { id:'c2', specId:'tarot', group:'Вчера', title:'Расклад на выбор пути', messages:[
+        { role:'user', content:'Сделай расклад на выбор пути между двумя вариантами' },
+        { role:'ai', content: SPEC.tarot.answer }
+      ]},
+      { id:'c3', specId:'numero', group:'Ранее', title:'Число судьбы по дате', messages:[
+        { role:'user', content:'Рассчитай число судьбы по дате рождения' },
+        { role:'ai', content: SPEC.numero.answer }
+      ]}
+    ],
+    notes: [
+      { id:'n1', title:'Расклад на клиента', body:'Клиент: 12.04.1988, 09:20, Новосибирск.\n\nЗапрос: выбор между двумя предложениями по работе.\n\nЧто проверить:\n— Луна в 10 доме\n— транзит Сатурна к MC\n— фаза Луны на дату решения\n\nЧерновик вывода: не торопиться до 18 ноября, дать ответ после новолуния.' },
+      { id:'n2', title:'Тезисы консультации', body:'1. Сначала контекст, потом карта.\n2. Не пугать: любая квадратура — задача, а не приговор.\n3. В конце — один конкретный шаг и дата.\n4. Записать клиента на проверку через месяц.' }
+    ],
+    specId: 'general',
+    activeId: null,
+    noteId: null,
+    openSpecs: ['general'],
+    model: 'fast',
+    used: 12,
+    streaming: false,
+    stop: false,
+    filter: '',
+    files: [],
+    notesOpen: true,
+    renaming: null,
+    menuTarget: null
+  };
+
+  const els = {
+    scroll: $('#scroll'), thread: $('#thread'), empty: $('#empty'), messages: $('#messages'),
+    noteView: $('#noteView'), noteTitle: $('#noteTitle'), noteBody: $('#noteBody'),
+    noteStatus: $('#noteStatus'), noteActions: $('#noteActions'),
+    generalWrap: $('#generalWrap'), generalBtn: $('#generalBtn'), generalAdd: $('#generalAdd'), generalList: $('#generalList'),
+    notesToggle: $('#notesToggle'),
+    attachRow: $('#attachRow'), attachMenu: $('#attachMenu'), attachBtn: $('#attachBtn'),
+    fileImage: $('#fileImage'), fileAny: $('#fileAny'),
+    input: $('#input'), composer: $('#composer'), composerWrap: $('#composerWrap'),
+    send: $('#send'), count: $('#count'),
+    modelChip: $('#modelChip'), modelMenu: $('#modelMenu'), modelName: $('#modelName'),
+    noteList: $('#noteList'), specList: $('#specList'), search: $('#search'),
+    chatTitle: $('#chatTitle'), chatSub: $('#chatSub'),
+    eyebrow: $('#eyebrow'), heroTitle: $('#heroTitle'), heroSub: $('#heroSub'), sugg: $('#sugg'),
+    clearBtn: $('#clearBtn'), shareBtn: $('#shareBtn'),
+    quotaText: $('#quotaText'), quotaBar: $('#quotaBar'), quotaWrap: $('#quotaBarWrap'),
+    sidebar: $('#sidebar'), overlay: $('#overlay'), menuBtn: $('#menuBtn'),
+    rowMenu: $('#rowMenu'), toast: $('#toast'),
+    dlg: $('#dlg'), dlgTitle: $('#dlgTitle'), dlgBody: $('#dlgBody')
+  };
+
+  const activeChat = () => state.chats.find(c => c.id === state.activeId);
+  const currentNote = () => state.notes.find(n => n.id === state.noteId);
+  const curSpec = () => SPEC[state.specId] || SPECS[0];
+  function viewSpec(){
+    const c = activeChat();
+    return (c && SPEC[c.specId]) ? SPEC[c.specId] : curSpec();
+  }
+  const chatsOf = id => state.chats.filter(c => c.specId === id);
+  const timeNow = () => new Date().toLocaleTimeString('ru-RU', { hour:'2-digit', minute:'2-digit' });
+
+  /* ---------- persistence ---------- */
+  function persist(){
+    try{
+      localStorage.setItem(KEY, JSON.stringify({
+        chats: state.chats, notes: state.notes, openSpecs: state.openSpecs, notesOpen: state.notesOpen
+      }));
+    } catch(e){ /* private mode */ }
+  }
+  function restore(){
+    try{
+      const raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      const d = JSON.parse(raw);
+      if (d && Array.isArray(d.chats) && Array.isArray(d.notes)){
+        state.chats = d.chats;
+        state.notes = d.notes;
+        if (Array.isArray(d.openSpecs) && d.openSpecs.length) state.openSpecs = d.openSpecs;
+        if (typeof d.notesOpen === 'boolean') state.notesOpen = d.notesOpen;
+      }
+    } catch(e){ /* ignore broken state */ }
+  }
+
+  function ensureChat(){
+    let chat = activeChat();
+    if (!chat){
+      chat = { id:'c' + Date.now(), specId: state.specId, group:'Сегодня', title:'Новый диалог', messages:[] };
+      state.chats.unshift(chat);
+      state.activeId = chat.id;
+    }
+    return chat;
+  }
+
+  /* ---------- markdown (mini) ---------- */
+  function esc(s){
+    return String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  }
+  function md(src){
+    const codes = [];
+    let s = String(src).replace(/```[a-z]*\n([\s\S]*?)```/g, function(_, code){
+      codes.push(code.replace(/\n+$/, ''));
+      return '\u0000' + (codes.length - 1) + '\u0000';
+    });
+    const inline = t => esc(t)
+      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.+?)\*/g, '<em>$1</em>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+    const lines = s.split('\n');
+    let out = '', list = null;
+    const closeList = () => { if (list) { out += '</' + list + '>'; list = null; } };
+    for (let i = 0; i < lines.length; i++){
+      const line = lines[i].replace(/\s+$/, '');
+      const cm = line.match(/^\u0000(\d+)\u0000$/);
+      if (cm){ closeList(); out += '<pre><code>' + esc(codes[+cm[1]]) + '</code></pre>'; continue; }
+      if (!line.trim()){ closeList(); continue; }
+      if (/^###\s+/.test(line)){ closeList(); out += '<h4>' + inline(line.replace(/^###\s+/, '')) + '</h4>'; continue; }
+      if (/^>\s?/.test(line)){ closeList(); out += '<blockquote>' + inline(line.replace(/^>\s?/, '')) + '</blockquote>'; continue; }
+      if (/^[-*]\s+/.test(line)){
+        if (list !== 'ul'){ closeList(); out += '<ul>'; list = 'ul'; }
+        out += '<li>' + inline(line.replace(/^[-*]\s+/, '')) + '</li>'; continue;
+      }
+      if (/^\d+\.\s+/.test(line)){
+        if (list !== 'ol'){ closeList(); out += '<ol>'; list = 'ol'; }
+        out += '<li>' + inline(line.replace(/^\d+\.\s+/, '')) + '</li>'; continue;
+      }
+      closeList();
+      out += '<p>' + inline(line) + '</p>';
+    }
+    closeList();
+    return out;
+  }
+
+  /* ---------- sidebar ---------- */
+  function renameInput(value, onCommit){
+    const inp = document.createElement('input');
+    inp.className = 'rename-input';
+    inp.value = value;
+    inp.maxLength = 90;
+    inp.addEventListener('keydown', function(e){
+      if (e.key === 'Enter'){ e.preventDefault(); onCommit(inp.value); }
+      if (e.key === 'Escape'){ e.preventDefault(); state.renaming = null; renderSidebar(); }
+    });
+    inp.addEventListener('blur', function(){ onCommit(inp.value); });
+    return inp;
+  }
+
+  function renderNotes(){
+    els.noteList.innerHTML = '';
+    const q = state.filter.trim().toLowerCase();
+    const notes = state.notes.filter(n => !q || n.title.toLowerCase().indexOf(q) > -1 || n.body.toLowerCase().indexOf(q) > -1);
+
+    if (!notes.length){
+      const p = document.createElement('p');
+      p.className = 'chat-empty';
+      p.textContent = q ? 'Нет совпадений' : 'Пусто — нажмите +';
+      els.noteList.appendChild(p);
+      return;
+    }
+
+    notes.forEach(function(n){
+      const row = document.createElement('div');
+      row.className = 'tree-row' + (state.noteId === n.id ? ' active' : '');
+
+      if (state.renaming && state.renaming.type === 'note' && state.renaming.id === n.id){
+        row.appendChild(renameInput(n.title, function(v){ commitRename(v); }));
+      } else {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tree-btn';
+        b.textContent = n.title || 'Без названия';
+        b.title = n.title;
+        b.dataset.note = n.id;
+        row.appendChild(b);
+
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'more-btn';
+        more.dataset.more = 'note';
+        more.dataset.id = n.id;
+        more.setAttribute('aria-label', 'Действия с заметкой');
+        more.textContent = '⋯';
+        row.appendChild(more);
+      }
+      els.noteList.appendChild(row);
+    });
+  }
+
+  function renderSpecs(){
+    els.specList.innerHTML = '';
+    const q = state.filter.trim().toLowerCase();
+    const currentSpec = viewSpec().id;
+    let total = 0;
+
+    SPECS.filter(function(x){ return !x.isGeneral || q; }).forEach(function(s){
+      const all = chatsOf(s.id);
+      const chats = all.filter(c => !q || c.title.toLowerCase().indexOf(q) > -1);
+      const open = state.openSpecs.indexOf(s.id) > -1 || !!q;
+
+      const row = document.createElement('div');
+      row.className = 'spec-row' + (s.id === currentSpec ? ' active' : '');
+
+      const main = document.createElement('button');
+      main.type = 'button';
+      main.className = 'spec-main';
+      main.dataset.spec = s.id;
+      main.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + ICONS[s.id] + '</svg>' +
+        '<span class="spec-name">' + esc(s.name) + '</span>';
+      row.appendChild(main);
+
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'spec-add';
+      add.dataset.add = s.id;
+      add.title = 'Новый чат · ' + s.name;
+      add.setAttribute('aria-label', 'Новый чат · ' + s.name);
+      add.textContent = '+';
+      row.appendChild(add);
+
+      const caret = document.createElement('button');
+      caret.type = 'button';
+      caret.className = 'spec-caret' + (all.length ? '' : ' is-empty');
+      caret.dataset.toggle = s.id;
+      caret.setAttribute('aria-expanded', open ? 'true' : 'false');
+      caret.setAttribute('aria-label', 'Показать чаты · ' + s.name);
+      caret.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+      row.appendChild(caret);
+
+      els.specList.appendChild(row);
+
+      if (open && chats.length){
+        chats.forEach(function(c){
+          const cr = document.createElement('div');
+          cr.className = 'tree-row child' + (state.activeId === c.id && !state.noteId ? ' active' : '');
+
+          if (state.renaming && state.renaming.type === 'chat' && state.renaming.id === c.id){
+            cr.appendChild(renameInput(c.title, function(v){ commitRename(v); }));
+          } else {
+            const b = document.createElement('button');
+            b.type = 'button';
+            b.className = 'tree-btn';
+            b.textContent = c.title;
+            b.title = c.title;
+            b.dataset.chat = c.id;
+            cr.appendChild(b);
+
+            const more = document.createElement('button');
+            more.type = 'button';
+            more.className = 'more-btn';
+            more.dataset.more = 'chat';
+            more.dataset.id = c.id;
+            more.setAttribute('aria-label', 'Действия с чатом');
+            more.textContent = '⋯';
+            cr.appendChild(more);
+          }
+          els.specList.appendChild(cr);
+          total++;
+        });
+      }
+    });
+
+    if (q && !total){
+      const p = document.createElement('p');
+      p.className = 'chat-empty';
+      p.textContent = 'Чаты не найдены';
+      els.specList.appendChild(p);
+    }
+  }
+
+  function renderGeneralState(){
+    const on = !state.noteId && viewSpec().id === 'general';
+    els.generalWrap.classList.toggle('active', on);
+  }
+
+  function renderGeneralChats(){
+    els.generalList.innerHTML = '';
+    const list = state.chats.filter(function(c){ return c.specId === 'general'; });
+    list.forEach(function(c){
+      const row = document.createElement('div');
+      row.className = 'tree-row general-chat' + (state.activeId === c.id && !state.noteId ? ' active' : '');
+
+      if (state.renaming && state.renaming.type === 'chat' && state.renaming.id === c.id){
+        row.appendChild(renameInput(c.title, function(v){ commitRename(v); }));
+      } else {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'tree-btn';
+        b.textContent = c.title;
+        b.title = c.title;
+        b.dataset.chat = c.id;
+        row.appendChild(b);
+
+        const more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'more-btn';
+        more.dataset.more = 'chat';
+        more.dataset.id = c.id;
+        more.setAttribute('aria-label', 'Действия с чатом');
+        more.textContent = '⋯';
+        row.appendChild(more);
+      }
+      els.generalList.appendChild(row);
+    });
+  }
+
+  function updateNotesToggle(){
+    els.notesToggle.setAttribute('aria-expanded', state.notesOpen ? 'true' : 'false');
+    els.noteList.hidden = !state.notesOpen;
+  }
+
+  function renderSidebar(){
+    renderNotes();
+    renderSpecs();
+    renderGeneralChats();
+    renderGeneralState();
+    updateNotesToggle();
+    requestAnimationFrame(function(){
+      const inp = $('.rename-input');
+      if (inp && document.activeElement !== inp){ inp.focus(); inp.select(); }
+    });
+  }
+
+  /* ---------- main ---------- */
+  function renderEmpty(){
+    const s = viewSpec();
+    els.eyebrow.textContent = (s.eyebrow || s.name) + ' · бесплатно';
+    els.heroTitle.textContent = s.head;
+    els.heroSub.textContent = s.lead;
+    els.sugg.innerHTML = '';
+    s.sugg.forEach(function(item, i){
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.dataset.q = item.q;
+      b.innerHTML = '<span class="idx">' + String(i + 1).padStart(2, '0') + '</span><b>' + esc(item.t) + '</b><span class="d">' + esc(item.d) + '</span>';
+      els.sugg.appendChild(b);
+    });
+  }
+
+  function renderHeader(){
+    if (state.noteId){
+      const n = currentNote();
+      els.chatTitle.textContent = (n && n.title) ? n.title : 'Без названия';
+      els.chatSub.textContent = 'Блокнот · заметка';
+      return;
+    }
+    const chat = activeChat();
+    const s = viewSpec();
+    els.chatTitle.textContent = chat ? chat.title : s.name;
+    els.chatSub.textContent = chat ? (s.isGeneral ? s.sub : s.name + ' · ' + s.sub) : s.sub;
+  }
+
+  function aiShell(){
+    const row = document.createElement('div');
+    row.className = 'msg ai';
+    row.innerHTML = '<div class="avatar" aria-hidden="true">к</div><div class="body"></div>';
+    return row;
+  }
+
+  function actBtn(act, icon, label){
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'act';
+    b.dataset.act = act;
+    b.title = label;
+    b.setAttribute('aria-label', label);
+    b.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true">' + icon + '</svg>';
+    return b;
+  }
+
+  function actionsFor(kind){
+    const wrap = document.createElement('div');
+    wrap.className = 'actions';
+    wrap.appendChild(actBtn('copy', ACT_ICONS.copy, 'Копировать'));
+    if (kind === 'ai'){
+      wrap.appendChild(actBtn('share', ACT_ICONS.share, 'Поделиться'));
+      wrap.appendChild(actBtn('save', ACT_ICONS.save, 'Сохранить в блокнот'));
+      const sep = document.createElement('span');
+      sep.className = 'act-sep';
+      wrap.appendChild(sep);
+      wrap.appendChild(actBtn('regen', ACT_ICONS.regen, 'Заново'));
+    }
+    return wrap;
+  }
+
+  function renderMessages(){
+    const chat = activeChat();
+    els.messages.innerHTML = '';
+    if (!chat || chat.messages.length === 0){
+      els.empty.style.display = '';
+      return;
+    }
+    els.empty.style.display = 'none';
+
+    chat.messages.forEach(function(m, i){
+      if (m.role === 'user'){
+        const row = document.createElement('div');
+        row.className = 'msg user';
+        const wrap = document.createElement('div');
+        wrap.className = 'u-wrap';
+        const b = document.createElement('div');
+        b.className = 'bubble';
+        b.textContent = m.content;
+        if (m.files && m.files.length){
+          const fl = document.createElement('div');
+          fl.className = 'msg-files';
+          m.files.forEach(function(f){
+            const chip = document.createElement('span');
+            chip.className = 'file-chip';
+            const nm = document.createElement('span');
+            nm.className = 'nm';
+            nm.textContent = f.name;
+            chip.appendChild(nm);
+            fl.appendChild(chip);
+          });
+          b.appendChild(fl);
+        }
+        wrap.appendChild(b);
+        wrap.appendChild(actionsFor('user'));
+        row.appendChild(wrap);
+        row.dataset.i = i;
+        els.messages.appendChild(row);
+      } else {
+        const row = aiShell();
+        const body = $('.body', row);
+        const p = document.createElement('div');
+        p.className = 'prose fade-in';
+        p.innerHTML = md(m.content);
+        body.appendChild(p);
+        body.appendChild(actionsFor('ai'));
+        row.dataset.i = i;
+        els.messages.appendChild(row);
+      }
+    });
+    scrollBottom(true);
+  }
+
+  function renderNote(){
+    const n = currentNote();
+    if (!n){ state.noteId = null; renderMain(); return; }
+    els.noteTitle.value = n.title;
+    els.noteBody.value = n.body;
+    updateNoteStatus(true);
+  }
+
+  function updateNoteStatus(saved){
+    const len = els.noteBody.value.length;
+    els.noteStatus.textContent = saved
+      ? 'Сохранено ' + stampNow() + ' · ' + len + ' символов'
+      : 'Сохранение…';
+  }
+
+  function stampNow(){
+    const d = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '.' + String(d.getFullYear()).slice(-2) +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+
+  function renderMain(){
+    const noteMode = !!state.noteId;
+    els.noteView.classList.toggle('is-hidden', !noteMode);
+    els.thread.classList.toggle('is-hidden', noteMode);
+    els.composerWrap.classList.toggle('is-hidden', noteMode);
+    renderHeader();
+    if (noteMode){ renderNote(); return; }
+    renderMessages();
+  }
+
+  function refresh(){
+    renderSidebar();
+    renderEmpty();
+    renderMain();
+    els.input.placeholder = viewSpec().ph;
+  }
+
+  /* ---------- quota / composer ---------- */
+  function updateQuota(){
+    els.quotaText.textContent = state.used + ' / ' + LIMIT;
+    const pct = Math.min(100, Math.round(state.used / LIMIT * 100));
+    els.quotaBar.style.width = pct + '%';
+    els.quotaWrap.setAttribute('aria-valuenow', String(state.used));
+    if (state.used >= LIMIT){
+      els.input.disabled = true;
+      els.input.placeholder = 'Лимит на сегодня исчерпан. Сброс в 00:00.';
+    }
+    updateSendState();
+  }
+
+  function updateSendState(){
+    const has = els.input.value.trim().length > 0 || state.files.length > 0;
+    if (state.streaming){
+      els.send.disabled = false;
+      els.send.classList.add('is-stop');
+      els.send.setAttribute('aria-label', 'Остановить');
+      return;
+    }
+    els.send.classList.remove('is-stop');
+    els.send.setAttribute('aria-label', 'Отправить');
+    els.send.disabled = (!has || state.used >= LIMIT || els.input.disabled);
+  }
+
+  function updateCount(){ els.count.textContent = els.input.value.length + '/4000'; }
+
+  function autoGrow(){
+    els.input.style.height = 'auto';
+    els.input.style.height = Math.min(els.input.scrollHeight, 180) + 'px';
+  }
+
+  function nearBottom(){
+    const el = els.scroll;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 140;
+  }
+  function scrollBottom(force){
+    if (!force && !nearBottom()) return;
+    els.scroll.scrollTop = els.scroll.scrollHeight;
+  }
+
+  /* ---------- toast / dialog ---------- */
+  let toastTimer = null;
+  function toast(msg){
+    els.toast.textContent = msg;
+    els.toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ els.toast.classList.remove('show'); }, 2400);
+  }
+
+  function openDialog(title, html){
+    els.dlgTitle.textContent = title;
+    els.dlgBody.innerHTML = html;
+    if (typeof els.dlg.showModal === 'function') els.dlg.showModal();
+    else els.dlg.setAttribute('open', '');
+  }
+
+  function openConfirm(title, text, onYes){
+    openDialog(title, '<p>' + esc(text) + '</p>' +
+      '<div class="dlg-actions"><button type="button" class="btn-ghost" id="dlgNo">Отмена</button>' +
+      '<button type="button" class="btn-solid" id="dlgYes">Удалить</button></div>');
+    const no = $('#dlgNo'), yes = $('#dlgYes');
+    if (no) no.onclick = function(){ els.dlg.close(); };
+    if (yes) yes.onclick = function(){ els.dlg.close(); onYes(); };
+  }
+
+  /* ---------- streaming ---------- */
+  async function streamInto(body, text){
+    const s = document.createElement('div');
+    s.className = 'stream';
+    const caret = document.createElement('span');
+    caret.className = 'caret';
+    s.appendChild(caret);
+    body.appendChild(s);
+
+    state.streaming = true;
+    state.stop = false;
+    updateSendState();
+
+    const step = Math.max(2, Math.ceil(text.length / 150));
+    const speed = MODELS[state.model].speed;
+    let i = 0;
+    while (i < text.length){
+      if (state.stop) break;
+      i = Math.min(text.length, i + step);
+      s.textContent = text.slice(0, i).replace(/\*\*/g, '');
+      s.appendChild(caret);
+      scrollBottom();
+      await sleep(speed);
+    }
+
+    state.streaming = false;
+    updateSendState();
+    s.remove();
+
+    const p = document.createElement('div');
+    p.className = 'prose fade-in';
+    p.innerHTML = md(text.slice(0, i));
+    body.appendChild(p);
+    scrollBottom();
+  }
+
+  function pickReply(text, specId){
+    const s = SPEC[specId] || viewSpec();
+    const t = text.toLowerCase();
+    if (s.kw.some(function(k){ return t.indexOf(k) > -1; })) return s.answer;
+    return s.fallback;
+  }
+
+  async function sendMessage(text){
+    const chat = ensureChat();
+    const files = state.files.slice();
+
+    if (chat.messages.length === 0 && chat.title === 'Новый чат'){
+      const base = text || (files.length ? files[0].name : 'Новый чат');
+      chat.title = base.length > 52 ? base.slice(0, 52) + '…' : base;
+      chat.group = 'Сегодня';
+    }
+
+    chat.messages.push({ role:'user', content:text, files: files });
+    state.files = [];
+    renderPendingFiles();
+    persist();
+    refresh();
+
+    els.input.value = '';
+    autoGrow();
+    updateCount();
+    updateSendState();
+
+    state.used++;
+    updateQuota();
+
+    const row = aiShell();
+    const body = $('.body', row);
+    const typing = document.createElement('div');
+    typing.className = 'typing';
+    typing.innerHTML = '<i></i><i></i><i></i>';
+    body.appendChild(typing);
+    els.messages.appendChild(row);
+    scrollBottom();
+
+    await sleep(420 + Math.random() * 340);
+
+    const reply = pickReply(text, chat.specId);
+    typing.remove();
+    await streamInto(body, reply);
+
+    body.appendChild(actionsFor('ai'));
+    chat.messages.push({ role:'ai', content:reply });
+    row.dataset.i = chat.messages.length - 1;
+    persist();
+  }
+
+  /* ---------- navigation ---------- */
+  function openSpec(id){
+    state.specId = id;
+    state.noteId = null;
+    if (state.openSpecs.indexOf(id) < 0) state.openSpecs.push(id);
+    const mine = chatsOf(id);
+    state.activeId = mine.length ? mine[0].id : null;
+    persist();
+    refresh();
+    if (window.innerWidth <= 900) closeSidebar();
+  }
+
+  function openChat(id){
+    const chat = state.chats.find(function(c){ return c.id === id; });
+    if (!chat) return;
+    state.activeId = id;
+    state.specId = chat.specId;
+    state.noteId = null;
+    if (state.openSpecs.indexOf(chat.specId) < 0) state.openSpecs.push(chat.specId);
+    persist();
+    refresh();
+    if (window.innerWidth <= 900) closeSidebar();
+  }
+
+  function openNote(id){
+    const n = state.notes.find(function(x){ return x.id === id; });
+    if (!n) return;
+    state.noteId = id;
+    persist();
+    refresh();
+    if (window.innerWidth <= 900) closeSidebar();
+    setTimeout(function(){ els.noteBody.focus(); }, 60);
+  }
+
+  function newChatIn(specId){
+    const empty = state.chats.find(function(c){
+      return c.specId === specId && c.messages.length === 0 && c.title === 'Новый чат';
+    });
+    if (empty){
+      state.activeId = empty.id;
+    } else {
+      const chat = { id:'c' + Date.now(), specId: specId, group:'Сегодня', title:'Новый чат', messages:[] };
+      state.chats.unshift(chat);
+      state.activeId = chat.id;
+    }
+    state.specId = specId;
+    state.noteId = null;
+    if (state.openSpecs.indexOf(specId) < 0) state.openSpecs.push(specId);
+    persist();
+    refresh();
+    els.input.focus();
+    if (window.innerWidth <= 900) closeSidebar();
+  }
+
+  function addNote(){
+    const n = { id:'n' + Date.now(), title:'Новая заметка', body:'' };
+    state.notes.unshift(n);
+    state.noteId = n.id;
+    state.notesOpen = true;
+    persist();
+    refresh();
+    setTimeout(function(){ els.noteTitle.focus(); els.noteTitle.select(); }, 60);
+  }
+
+  /* ---------- rename / delete ---------- */
+  function commitRename(value){
+    const r = state.renaming;
+    if (!r) return;
+    state.renaming = null;
+    const v = (value || '').trim();
+    if (v){
+      if (r.type === 'chat'){
+        const c = state.chats.find(function(x){ return x.id === r.id; });
+        if (c) c.title = v;
+        if (state.activeId === r.id) renderHeader();
+      } else {
+        const n = state.notes.find(function(x){ return x.id === r.id; });
+        if (n){ n.title = v; if (state.noteId === r.id) els.noteTitle.value = v; }
+        if (state.noteId === r.id) renderHeader();
+      }
+      persist();
+    }
+    renderSidebar();
+  }
+
+  function askDelete(type, id){
+    const isChat = type === 'chat';
+    const item = isChat
+      ? state.chats.find(function(x){ return x.id === id; })
+      : state.notes.find(function(x){ return x.id === id; });
+    if (!item) return;
+
+    const name = isChat ? item.title : (item.title || 'Без названия');
+    openConfirm(
+      isChat ? 'Удалить чат?' : 'Удалить заметку?',
+      '«' + name + '» будет удалён без возможности восстановления.',
+      function(){
+        if (isChat){
+          state.chats = state.chats.filter(function(x){ return x.id !== id; });
+          if (state.activeId === id) state.activeId = null;
+        } else {
+          state.notes = state.notes.filter(function(x){ return x.id !== id; });
+          if (state.noteId === id) state.noteId = null;
+        }
+        persist();
+        refresh();
+        toast(isChat ? 'Чат удалён' : 'Заметка удалена');
+      }
+    );
+  }
+
+  /* ---------- row menu ---------- */
+  function openRowMenu(anchor, type, id){
+    state.menuTarget = { type: type, id: id };
+    els.rowMenu.hidden = false;
+    const r = anchor.getBoundingClientRect();
+    const mw = 184, mh = 84;
+    let left = r.right + 8;
+    if (left + mw > window.innerWidth - 8) left = Math.max(8, r.left - mw - 8);
+    let top = r.top - 4;
+    if (top + mh > window.innerHeight - 8) top = Math.max(8, window.innerHeight - mh - 8);
+    if (top < 8) top = 8;
+    els.rowMenu.style.left = left + 'px';
+    els.rowMenu.style.top = top + 'px';
+    anchor.setAttribute('aria-expanded', 'true');
+  }
+  function closeRowMenu(){
+    els.rowMenu.hidden = true;
+    state.menuTarget = null;
+  }
+
+  els.rowMenu.addEventListener('click', function(e){
+    const b = e.target.closest('button');
+    if (!b || !state.menuTarget) return;
+    const t = state.menuTarget;
+    closeRowMenu();
+    if (b.dataset.act === 'rename'){
+      state.renaming = { type: t.type, id: t.id };
+      renderSidebar();
+    } else {
+      askDelete(t.type, t.id);
+    }
+  });
+
+  document.addEventListener('click', function(e){
+    if (!els.rowMenu.hidden && !els.rowMenu.contains(e.target) && !e.target.closest('.more-btn')){
+      closeRowMenu();
+    }
+    if (!els.modelMenu.hidden && !els.modelMenu.contains(e.target) && !els.modelChip.contains(e.target)){
+      els.modelMenu.hidden = true;
+      els.modelChip.setAttribute('aria-expanded', 'false');
+    }
+    if (!els.attachMenu.hidden && !els.attachMenu.contains(e.target) && !els.attachBtn.contains(e.target)){
+      els.attachMenu.hidden = true;
+      els.attachBtn.setAttribute('aria-expanded', 'false');
+    }
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.key === 'Escape' && !els.rowMenu.hidden) closeRowMenu();
+  });
+
+  els.scroll.addEventListener('scroll', function(){
+    if (!els.rowMenu.hidden) closeRowMenu();
+  }, { passive: true });
+
+  /* ---------- events ---------- */
+  els.input.addEventListener('input', function(){
+    autoGrow(); updateCount(); updateSendState();
+  });
+
+  els.input.addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing){
+      e.preventDefault();
+      els.composer.requestSubmit();
+    }
+  });
+
+  els.composer.addEventListener('submit', function(e){
+    e.preventDefault();
+    if (state.streaming){ state.stop = true; return; }
+    const text = els.input.value.trim();
+    if (!text && !state.files.length) return;
+    sendMessage(text);
+  });
+
+  els.send.addEventListener('click', function(e){
+    if (state.streaming){ e.preventDefault(); state.stop = true; }
+  });
+
+  els.sugg.addEventListener('click', function(e){
+    const b = e.target.closest('button');
+    if (!b) return;
+    els.input.value = b.dataset.q;
+    autoGrow(); updateCount(); updateSendState();
+    els.input.focus();
+  });
+
+  els.modelChip.addEventListener('click', function(){
+    const open = els.modelMenu.hidden;
+    els.modelMenu.hidden = !open;
+    els.modelChip.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open){ els.attachMenu.hidden = true; els.attachBtn.setAttribute('aria-expanded', 'false'); }
+  });
+
+  document.querySelectorAll('.model-opt').forEach(function(opt){
+    opt.addEventListener('click', function(){
+      state.model = opt.dataset.model;
+      els.modelName.textContent = MODELS[state.model].name;
+      document.querySelectorAll('.model-opt').forEach(function(o){ o.setAttribute('aria-checked', o === opt ? 'true' : 'false'); });
+      els.modelMenu.hidden = true;
+      els.modelChip.setAttribute('aria-expanded', 'false');
+      toast('Модель: ' + MODELS[state.model].name);
+    });
+  });
+
+  els.specList.addEventListener('click', function(e){
+    const more = e.target.closest('.more-btn');
+    if (more){
+      e.preventDefault();
+      e.stopPropagation();
+      openRowMenu(more, more.dataset.more, more.dataset.id);
+      return;
+    }
+    const add = e.target.closest('.spec-add');
+    if (add){ e.preventDefault(); newChatIn(add.dataset.add); return; }
+
+    const caret = e.target.closest('.spec-caret');
+    if (caret){
+      e.preventDefault();
+      const id = caret.dataset.toggle;
+      const i = state.openSpecs.indexOf(id);
+      if (i > -1) state.openSpecs.splice(i, 1);
+      else state.openSpecs.push(id);
+      persist();
+      renderSidebar();
+      return;
+    }
+
+    const spec = e.target.closest('.spec-main');
+    if (spec){ openSpec(spec.dataset.spec); return; }
+
+    const chat = e.target.closest('.tree-btn[data-chat]');
+    if (chat){ openChat(chat.dataset.chat); }
+  });
+
+  els.noteList.addEventListener('click', function(e){
+    const more = e.target.closest('.more-btn');
+    if (more){
+      e.preventDefault();
+      openRowMenu(more, 'note', more.dataset.id);
+      return;
+    }
+    const b = e.target.closest('.tree-btn[data-note]');
+    if (b) openNote(b.dataset.note);
+  });
+
+  els.generalList.addEventListener('click', function(e){
+    const more = e.target.closest('.more-btn');
+    if (more){
+      e.preventDefault();
+      openRowMenu(more, 'chat', more.dataset.id);
+      return;
+    }
+    const b = e.target.closest('.tree-btn[data-chat]');
+    if (b) openChat(b.dataset.chat);
+  });
+
+  $('#noteAdd').addEventListener('click', addNote);
+
+  els.notesToggle.addEventListener('click', function(){
+    state.notesOpen = !state.notesOpen;
+    persist();
+    renderSidebar();
+  });
+
+  els.generalBtn.addEventListener('click', function(){ openSpec('general'); });
+  els.generalAdd.addEventListener('click', function(){ newChatIn('general'); });
+
+  els.search.addEventListener('input', function(){
+    state.filter = els.search.value;
+    renderSidebar();
+  });
+
+  els.clearBtn.addEventListener('click', function(){
+    if (state.noteId){ toast('Заметку можно удалить через ⋯ в списке'); return; }
+    const chat = activeChat();
+    if (!chat || !chat.messages.length){ toast('Диалог уже пустой'); return; }
+    chat.messages = [];
+    chat.title = 'Новый чат';
+    persist();
+    refresh();
+    toast('Диалог очищен');
+  });
+
+  els.shareBtn.addEventListener('click', function(){
+    copyText(location.href).then(function(){ toast('Ссылка скопирована'); });
+  });
+
+  els.attachBtn.addEventListener('click', function(){
+    const open = els.attachMenu.hidden;
+    els.attachMenu.hidden = !open;
+    els.attachBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (open){ els.modelMenu.hidden = true; els.modelChip.setAttribute('aria-expanded', 'false'); }
+  });
+
+  els.attachMenu.addEventListener('click', function(e){
+    const b = e.target.closest('button');
+    if (!b) return;
+    els.attachMenu.hidden = true;
+    els.attachBtn.setAttribute('aria-expanded', 'false');
+    if (b.dataset.attach === 'image') els.fileImage.click();
+    else els.fileAny.click();
+  });
+
+  function fmtSize(b){
+    if (b < 1024) return b + ' Б';
+    if (b < 1024 * 1024) return Math.round(b / 1024) + ' КБ';
+    return (b / 1024 / 1024).toFixed(1).replace('.', ',') + ' МБ';
+  }
+
+  function renderPendingFiles(){
+    els.attachRow.innerHTML = '';
+    if (!state.files.length){ els.attachRow.hidden = true; return; }
+    els.attachRow.hidden = false;
+    state.files.forEach(function(f, i){
+      const chip = document.createElement('span');
+      chip.className = 'attach-chip';
+      const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = f.name;
+      const sz = document.createElement('span'); sz.className = 'sz'; sz.textContent = fmtSize(f.size);
+      const rm = document.createElement('button');
+      rm.type = 'button'; rm.className = 'rm'; rm.textContent = '×';
+      rm.setAttribute('aria-label', 'Убрать файл');
+      rm.addEventListener('click', function(){ state.files.splice(i, 1); renderPendingFiles(); updateSendState(); });
+      chip.appendChild(nm); chip.appendChild(sz); chip.appendChild(rm);
+      els.attachRow.appendChild(chip);
+    });
+  }
+
+  function addFiles(list){
+    Array.prototype.forEach.call(list || [], function(f){
+      state.files.push({ name: f.name, size: f.size, type: f.type || '' });
+    });
+    renderPendingFiles();
+    updateSendState();
+  }
+
+  els.fileImage.addEventListener('change', function(){ addFiles(this.files); this.value = ''; });
+  els.fileAny.addEventListener('change', function(){ addFiles(this.files); this.value = ''; });
+
+  els.noteTitle.addEventListener('input', function(){
+    const n = currentNote();
+    if (!n) return;
+    n.title = els.noteTitle.value;
+    renderHeader();
+    persist();
+  });
+
+  let noteTimer = null;
+  els.noteBody.addEventListener('input', function(){
+    const n = currentNote();
+    if (!n) return;
+    n.body = els.noteBody.value;
+    updateNoteStatus(false);
+    clearTimeout(noteTimer);
+    noteTimer = setTimeout(function(){ persist(); updateNoteStatus(true); }, 500);
+  });
+
+  function noteText(n){ return (n.title ? n.title + '\n\n' : '') + n.body; }
+
+  function downloadNote(n){
+    try{
+      const blob = new Blob([noteText(n)], { type: 'text/plain;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = (n.title || 'заметка').replace(/[\\/:*?"<>|]/g, '-').slice(0, 60) + '.txt';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1500);
+      toast('Заметка сохранена в файл');
+    } catch(e){ toast('Не удалось сохранить файл'); }
+  }
+
+  [['copy', ACT_ICONS.copy, 'Копировать заметку'],
+   ['share', ACT_ICONS.share, 'Поделиться'],
+   ['download', ACT_ICONS.download, 'Сохранить в файл']].forEach(function(a){
+    els.noteActions.appendChild(actBtn(a[0], a[1], a[2]));
+  });
+
+  els.noteActions.addEventListener('click', function(e){
+    const b = e.target.closest('.act');
+    const n = currentNote();
+    if (!b || !n) return;
+    if (b.dataset.act === 'copy') copyText(noteText(n)).then(function(){ toast('Заметка скопирована'); });
+    else if (b.dataset.act === 'share') shareText(noteText(n));
+    else if (b.dataset.act === 'download') downloadNote(n);
+  });
+
+  els.messages.addEventListener('click', function(e){
+    const btn = e.target.closest('.act');
+    if (!btn) return;
+    const row = btn.closest('.msg');
+    const i = Number(row.dataset.i);
+    const chat = activeChat();
+    const msg = chat && chat.messages[i];
+    if (!msg) return;
+
+    if (btn.dataset.act === 'copy'){
+      copyText(msg.content).then(function(){ toast('Скопировано'); });
+      return;
+    }
+    if (btn.dataset.act === 'share'){
+      shareText(msg.content);
+      return;
+    }
+    if (btn.dataset.act === 'save'){
+      const q = chat.messages.slice(0, i).reverse().find(function(m){ return m.role === 'user'; });
+      saveToNote(msg.content, q ? q.content : '');
+      return;
+    }
+    if (btn.dataset.act === 'regen'){
+      if (state.streaming) return;
+      const lastUser = chat.messages.slice(0, i).reverse().find(function(m){ return m.role === 'user'; });
+      chat.messages.splice(i);
+      renderMessages();
+      if (lastUser){
+        state.used = Math.min(LIMIT, state.used + 1);
+        updateQuota();
+        const rowNew = aiShell();
+        const body = $('.body', rowNew);
+        const typing = document.createElement('div');
+        typing.className = 'typing';
+        typing.innerHTML = '<i></i><i></i><i></i>';
+        body.appendChild(typing);
+        els.messages.appendChild(rowNew);
+        scrollBottom();
+        sleep(380).then(function(){
+          typing.remove();
+          return streamInto(body, pickReply(lastUser.content, chat.specId));
+        }).then(function(){
+          body.appendChild(actionsFor('ai'));
+          chat.messages.push({ role:'ai', content: pickReply(lastUser.content, chat.specId) });
+          rowNew.dataset.i = i;
+          persist();
+        });
+      }
+    }
+  });
+
+  function makeNoteTitle(text){
+    const first = String(text).split('\n').map(function(l){ return l.trim(); }).filter(Boolean)[0] || 'Заметка';
+    const clean = first.replace(/[#*`>_]/g, '').replace(/\s+/g, ' ').trim();
+    return clean.length > 48 ? clean.slice(0, 48) + '…' : clean;
+  }
+
+  function saveToNote(text, question){
+    const title = makeNoteTitle(question || text);
+    const n = { id:'n' + Date.now(), title: title, body: text };
+    state.notes.unshift(n);
+    persist();
+    renderSidebar();
+    toast('Сохранено в блокнот: ' + title);
+  }
+
+  function shareText(text){
+    if (navigator.share){
+      navigator.share({ title: 'КРУГ', text: text }).catch(function(){});
+      return;
+    }
+    copyText(text).then(function(){ toast('Текст скопирован — можно отправить'); });
+  }
+
+  function copyText(text){
+    if (navigator.clipboard && window.isSecureContext){
+      return navigator.clipboard.writeText(text).catch(fallback);
+    }
+    return fallback();
+    function fallback(){
+      try{
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        return Promise.resolve();
+      } catch(err){ return Promise.reject(err); }
+    }
+  }
+
+  /* ---------- sidebar (mobile) ---------- */
+  function openSidebar(){
+    els.sidebar.classList.add('open');
+    els.overlay.hidden = false;
+    requestAnimationFrame(function(){ els.overlay.classList.add('show'); });
+    els.menuBtn.setAttribute('aria-expanded', 'true');
+  }
+  function closeSidebar(){
+    els.sidebar.classList.remove('open');
+    els.overlay.classList.remove('show');
+    els.menuBtn.setAttribute('aria-expanded', 'false');
+    setTimeout(function(){ if (!els.sidebar.classList.contains('open')) els.overlay.hidden = true; }, 220);
+  }
+  els.menuBtn.addEventListener('click', openSidebar);
+  $('#closeSide').addEventListener('click', closeSidebar);
+  els.overlay.addEventListener('click', closeSidebar);
+
+  /* ---------- dialogs ---------- */
+  $('#aboutBtn').addEventListener('click', function(){
+    openDialog('О проекте', '<p><strong>КРУГ</strong> — рабочее пространство практикующего специалиста. Шесть направлений и общий чат, у каждого своя логика ответа и свои подсказки.</p>' +
+      '<ul><li><strong>Общий чат</strong> — любые вопросы, без привязки к методу.</li>' +
+      '<li><strong>Астрология</strong> — карта, транзиты, подбор дат.</li>' +
+      '<li><strong>Таро</strong> — вопрос, схема расклада, трактовка.</li>' +
+      '<li><strong>Нумерология</strong> — расчёты с проверяемым ходом.</li>' +
+      '<li><strong>Гипноз</strong> — скрипты и трансовые тексты.</li>' +
+      '<li><strong>Психология</strong> — запрос, структура сессии, техники.</li>' +
+      '<li><strong>Эзотерика</strong> — практики с объяснением.</li></ul>' +
+      '<p style="margin-top:12px">Блокнот хранит заметки отдельно от чатов: их можно переименовывать, удалять и копировать в один клик.</p>' +
+      '<p>Это прототип интерфейса: ответы демонстрационные, подключение к n8n — следующий шаг.</p>');
+  });
+
+  $('#keysBtn').addEventListener('click', function(){
+    openDialog('Горячие клавиши', '<ul>' +
+      '<li><kbd>Enter</kbd> — отправить</li>' +
+      '<li><kbd>Shift</kbd> + <kbd>Enter</kbd> — перенос строки</li>' +
+      '<li><kbd>Ctrl</kbd> + <kbd>K</kbd> — поиск по чатам и заметкам</li>' +
+      '<li><kbd>Esc</kbd> — закрыть меню или диалог</li></ul>');
+  });
+
+  $('#dlgClose').addEventListener('click', function(){ els.dlg.close(); });
+  els.dlg.addEventListener('click', function(e){ if (e.target === els.dlg) els.dlg.close(); });
+
+  document.addEventListener('keydown', function(e){
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k'){
+      e.preventDefault();
+      if (window.innerWidth <= 900) openSidebar();
+      els.search.focus();
+      return;
+    }
+    if (e.key === 'Escape'){
+      if (!els.attachMenu.hidden){
+        els.attachMenu.hidden = true;
+        els.attachBtn.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      if (!els.modelMenu.hidden){
+        els.modelMenu.hidden = true;
+        els.modelChip.setAttribute('aria-expanded', 'false');
+        return;
+      }
+      if (els.sidebar.classList.contains('open')) closeSidebar();
+    }
+  });
+
+  window.addEventListener('resize', function(){
+    if (window.innerWidth > 900 && els.sidebar.classList.contains('open')) closeSidebar();
+    if (!els.rowMenu.hidden) closeRowMenu();
+  });
+
+  /* ---------- init ---------- */
+  restore();
+  els.modelName.textContent = MODELS[state.model].name;
+  refresh();
+  updateQuota();
+  updateCount();
+  autoGrow();
+})();
+</script>
+</body>
+</html>
